@@ -1,9 +1,8 @@
-function getApiUrl() {
+export function getApiUrl() {
   return localStorage.getItem('ruffl_api_url') || 'http://localhost:5000';
 }
 
 export function setApiUrl(url) {
-  // Auto-prepend https:// if no protocol specified
   if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
     url = 'https://' + url;
   }
