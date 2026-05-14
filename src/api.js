@@ -1,4 +1,6 @@
-const API_URL = localStorage.getItem('ruffl_api_url') || 'http://localhost:5000';
+function getApiUrl() {
+  return localStorage.getItem('ruffl_api_url') || 'http://localhost:5000';
+}
 
 export function setApiUrl(url) {
   // Auto-prepend https:// if no protocol specified
@@ -8,16 +10,12 @@ export function setApiUrl(url) {
   localStorage.setItem('ruffl_api_url', url);
 }
 
-export function getApiUrl() {
-  return API_URL;
-}
-
 async function request(path, options = {}) {
   const token = localStorage.getItem('ruffl_admin_token');
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiUrl()}${path}`, {
     ...options,
     headers: { ...headers, ...options.headers },
   });
