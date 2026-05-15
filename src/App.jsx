@@ -264,6 +264,19 @@ function DisputeDetailPage({ disputeId, onBack }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Poll for live updates when evidence or messages tab is active
+  useEffect(() => {
+    if (tab === 'evidence' || tab === 'messages') {
+      const interval = setInterval(async () => {
+        try {
+          const res = await getDispute(disputeId);
+          setData(res.data);
+        } catch (_) {}
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [tab, disputeId]);
+
   async function handleAssign() {
     try {
       await assignDispute(disputeId);
