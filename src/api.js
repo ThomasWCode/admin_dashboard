@@ -1,22 +1,23 @@
-export function getApiUrl() {
-  return localStorage.getItem('ruffl_api_url') || 'http://localhost:5000';
-}
+// Production API URL — hardcoded, not configurable at runtime
+const API_URL = 'https://backend.ruffl.thomaswhite.me';
 
-export function setApiUrl(url) {
-  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'https://' + url;
-  }
-  localStorage.setItem('ruffl_api_url', url);
+export function getApiUrl() {
+  return API_URL;
 }
 
 async function request(path, options = {}) {
   const token = localStorage.getItem('ruffl_admin_token');
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+  };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${getApiUrl()}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: { ...headers, ...options.headers },
+    cache: 'no-store',
   });
 
   const data = await res.json();

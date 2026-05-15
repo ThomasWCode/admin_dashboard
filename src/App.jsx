@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { listDisputes, getDispute, assignDispute, adjudicateDispute, closeDispute, sendDisputeMessage, listCommissions, getCommission, login, logout, isLoggedIn, getApiUrl, setApiUrl } from './api';
+import { listDisputes, getDispute, assignDispute, adjudicateDispute, closeDispute, sendDisputeMessage, listCommissions, getCommission, login, logout, isLoggedIn } from './api';
 
 // ── Shared Styles ──
 const S = {
@@ -85,7 +85,6 @@ function formatDate(d) {
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [apiUrl, setApiUrlState] = useState(getApiUrl());
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -94,7 +93,6 @@ function LoginPage({ onLogin }) {
     setError('');
     setLoading(true);
     try {
-      setApiUrl(apiUrl);
       const data = await login(email, password);
       if (data.user.role !== 'admin') {
         setError('Access denied. Admin role required.');
@@ -117,10 +115,6 @@ function LoginPage({ onLogin }) {
           <div style={S.logoSub}>Dispute Resolution Dashboard</div>
         </div>
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#705e8a', marginBottom: 5 }}>API URL</label>
-            <input style={S.input} value={apiUrl} onChange={e => setApiUrlState(e.target.value)} placeholder="https://your-app.railway.app" />
-          </div>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#705e8a', marginBottom: 5 }}>Email</label>
             <input style={S.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@ruffl.app" required />

@@ -25,11 +25,10 @@ npm run dev
 
 The dev server starts at `http://localhost:5173`. On first load you will
 be prompted to enter:
-- **API URL** — your Railway backend URL (e.g. `https://ruffl-backend-production.up.railway.app`)
 - **Email** — admin user email
 - **Password** — admin user password
 
-The API URL is saved in localStorage so you only need to enter it once.
+The API URL is hardcoded to `https://backend.ruffl.thomaswhite.me`.
 
 ## Deployment to GitHub Pages
 
@@ -79,9 +78,8 @@ This pushes the `dist/` folder to the `gh-pages` branch.
 ### Logging In
 
 1.  Navigate to `https://admin.ruffl.thomaswhite.me`
-2.  Enter your Railway backend API URL
-3.  Enter admin email and password
-4.  Only users with `role = 'admin'` in the database can log in
+2.  Enter admin email and password
+3.  Only users with `role = 'admin'` in the database can log in
 
 ### Dispute List
 
