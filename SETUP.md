@@ -151,9 +151,11 @@ UPDATE users SET role='admin' WHERE email='your-admin-email@example.com';
 ```
 
 **Problem:** CORS errors when accessing the backend
-**Fix:** The Flask backend has `CORS(app, origins="*")` which allows
-all origins. If you've changed this, ensure `admin.ruffl.thomaswhite.me`
-is in the allowed origins.
+**Fix:** The Flask backend restricts CORS to known origins:
+`https://admin.ruffl.thomaswhite.me`, `http://localhost:5173`, and
+`http://localhost:3000`. If you're running the dashboard on a different
+origin (e.g. a different port or domain), add it to the
+`ALLOWED_ORIGINS` list in `v2/backend/app.py`.
 
 **Problem:** Login succeeds but dispute list is empty
 **Fix:** The admin user must have `role = 'admin'` to see all disputes.
