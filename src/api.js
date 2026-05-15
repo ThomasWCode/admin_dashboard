@@ -1,6 +1,32 @@
 // Production API URL — hardcoded, not configurable at runtime
 const API_URL = 'https://backend.ruffl.thomaswhite.me';
 
+// CSRF token management
+let _csrfToken = null;
+
+async function _fetchCsrfToken() {
+  const res = await fetch(`${API_URL}/api/csrf-token`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('ruffl_admin_token') || ''}`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch CSRF token');
+  const data = await res.json();
+  _csrfToken = data.data.csrf_token;
+  return _csrfToken;
+}
+
+async function _ensureCsrfToken() {
+  if (!_csrfToken) {
+    await _fetchCsrfToken();
+  }
+  return _csrfToken;
+}
+
 export function getApiUrl() {
   return API_URL;
 }
@@ -14,11 +40,35 @@ async function request(path, options = {}) {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
+  // Add CSRF token for state-changing requests
+  if (options.method && options.method !== 'GET' && options.method !== 'HEAD') {
+    const csrf = await _ensureCsrfToken();
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+  }
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: { ...headers, ...options.headers },
     cache: 'no-store',
   });
+
+  // If CSRF failed, try once more with a fresh token
+  if (res.status === 403 && options.method && options.method !== 'GET') {
+    _csrfToken = null;
+    const csrf = await _fetchCsrfToken();
+    if (csrf) {
+      headers['X-CSRF-Token'] = csrf;
+      const retry = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: { ...headers, ...options.headers },
+        cache: 'no-store',
+      });
+      if (retry.ok) {
+        const data = await retry.json();
+        return data;
+      }
+    }
+  }
 
   const data = await res.json();
   if (!res.ok) {
@@ -42,6 +92,7 @@ export async function login(email, password) {
 
 export function logout() {
   localStorage.removeItem('ruffl_admin_token');
+  _csrfToken = null;
 }
 
 export function isLoggedIn() {
