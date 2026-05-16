@@ -225,7 +225,7 @@ function UsersPage({ onViewUser }) {
 }
 
 // ── User Detail Page ──
-function UserDetailPage({ userId, onBack }) {
+function UserDetailPage({ userId, onBack, onMessageUser }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -252,6 +252,14 @@ function UserDetailPage({ userId, onBack }) {
     }
     setLoading(false);
   }, [userId]);
+
+  function handleMessageUser() {
+    adminGetOrCreateChat(userId).then(res => {
+      if (onMessageUser) {
+        onMessageUser(res.data.id);
+      }
+    }).catch(err => { setError(err.message); });
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -341,11 +349,13 @@ function UserDetailPage({ userId, onBack }) {
             <button onClick={() => setShowSuspend(true)} disabled={actionLoading} style={{ ...S.btn, ...S.btnWarning }}>🔒 Suspend</button>
           )}
           <button onClick={() => setShowWarn(true)} disabled={actionLoading} style={{ ...S.btn, ...S.btnSecondary }}>⚠️ Send Warning</button>
+          <button onClick={handleMessageUser} disabled={actionLoading} style={{ ...S.btn, ...S.btnPrimary }}>💬 Message User</button>
           <button onClick={() => setShowDelete(true)} disabled={actionLoading} style={{ ...S.btn, ...S.btnDanger }}>🗑️ Delete Account</button>
         </div>
       )}
       {data.is_deleted && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <button onClick={handleMessageUser} disabled={actionLoading} style={{ ...S.btn, ...S.btnPrimary }}>💬 Message User</button>
           <button onClick={() => setShowPermDelete(true)} disabled={actionLoading} style={{ ...S.btn, ...S.btnDanger }}>💀 Permanent Delete</button>
         </div>
       )}
@@ -1192,7 +1202,7 @@ export default function App() {
     content = <AdminChatRoomPage roomId={selectedChat} onBack={() => setSelectedChat(null)} />;
     topBarTitle = 'Admin Chat';
   } else if (selectedUser) {
-    content = <UserDetailPage userId={selectedUser} onBack={() => setSelectedUser(null)} />;
+    content = <UserDetailPage userId={selectedUser} onBack={() => setSelectedUser(null)} onMessageUser={(chatId) => { setSelectedUser(null); setSelectedChat(chatId); }} />;
     topBarTitle = 'User Detail';
   } else if (selectedDispute) {
     content = <DisputeDetailPage disputeId={selectedDispute} onBack={() => setSelectedDispute(null)} />;
