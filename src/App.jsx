@@ -5,7 +5,7 @@ import {
   login, logout, isLoggedIn,
   adminSearchUsers, adminGetUserDetail, adminSuspendUser, adminUnsuspendUser,
   adminWarnUser, adminSoftDeleteUser, adminPermanentlyDeleteUser,
-  adminListChats, adminGetChatRoom, adminSendChatMessage,
+  adminListChats, adminGetOrCreateChat, adminGetChatRoom, adminSendChatMessage,
 } from './api';
 
 // ── Shared Styles ──
