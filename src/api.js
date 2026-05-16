@@ -81,7 +81,6 @@ export async function login(email, password) {
   });
   if (data.data.token) {
     localStorage.setItem('ruffl_admin_token', data.data.token);
-    // Pre-fetch CSRF token for subsequent admin requests
     await _fetchCsrfToken();
   }
   return data.data;
@@ -136,4 +135,67 @@ export function listCommissions() {
 
 export function getCommission(id) {
   return request(`/api/commissions/${id}`);
+}
+
+// ── Admin Users ──
+
+export function adminSearchUsers(q = '', status = 'all') {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (status && status !== 'all') params.set('status', status);
+  return request(`/api/admin/users?${params.toString()}`);
+}
+
+export function adminGetUserDetail(userId) {
+  return request(`/api/admin/users/${userId}`);
+}
+
+export function adminSuspendUser(userId, durationHours, reason) {
+  return request(`/api/admin/users/${userId}/suspend`, {
+    method: 'POST',
+    body: JSON.stringify({ duration_hours: durationHours, reason }),
+  });
+}
+
+export function adminUnsuspendUser(userId) {
+  return request(`/api/admin/users/${userId}/unsuspend`, { method: 'POST' });
+}
+
+export function adminWarnUser(userId, message) {
+  return request(`/api/admin/users/${userId}/warn`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+export function adminSoftDeleteUser(userId) {
+  return request(`/api/admin/users/${userId}/delete`, { method: 'POST' });
+}
+
+export function adminPermanentlyDeleteUser(userId) {
+  return request(`/api/admin/users/${userId}`, { method: 'DELETE' });
+}
+
+// ── Admin Chats ──
+
+export function adminListChats() {
+  return request('/api/admin/chats');
+}
+
+export function adminGetOrCreateChat(userId, subject = '') {
+  return request('/api/admin/chats', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, subject }),
+  });
+}
+
+export function adminGetChatRoom(roomId) {
+  return request(`/api/admin/chats/${roomId}`);
+}
+
+export function adminSendChatMessage(roomId, content, media = []) {
+  return request(`/api/admin/chats/${roomId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content, media }),
+  });
 }
