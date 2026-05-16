@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { listDisputes, getDispute, assignDispute, adjudicateDispute, closeDispute, sendDisputeMessage, login, logout, isLoggedIn } from './api';
+import { listDisputes, getDispute, assignDispute, adjudicateDispute, closeDispute, sendDisputeMessage, listCommissions, getCommission, login, logout, isLoggedIn } from './api';
 
 // ── Shared Styles ──
 const S = {
