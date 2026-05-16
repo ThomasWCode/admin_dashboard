@@ -128,12 +128,3 @@ export function sendDisputeMessage(id, content) {
   });
 }
 
-// ── Commissions ──
-
-export function listCommissions() {
-  return request('/api/admin/commissions');
-}
-
-export function getCommission(id) {
-  return request(`/api/commissions/${id}`);
-}
