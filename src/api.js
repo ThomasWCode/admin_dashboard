@@ -7,11 +7,6 @@ let _csrfToken = null;
 async function _fetchCsrfToken() {
   const res = await fetch(`${API_URL}/api/csrf-token`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('ruffl_admin_token') || ''}`,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-    },
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch CSRF token');
@@ -86,6 +81,8 @@ export async function login(email, password) {
   });
   if (data.data.token) {
     localStorage.setItem('ruffl_admin_token', data.data.token);
+    // Pre-fetch CSRF token for subsequent admin requests
+    await _fetchCsrfToken();
   }
   return data.data;
 }
