@@ -199,3 +199,9 @@ export function adminSendChatMessage(roomId, content, media = []) {
     body: JSON.stringify({ content, media }),
   });
 }
+
+// ── Admin: Reset Databases ──
+
+export function adminResetDatabases() {
+  return request('/api/admin/reset-databases', { method: 'POST' });
+}

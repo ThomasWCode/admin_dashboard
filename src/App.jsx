@@ -6,6 +6,7 @@ import {
   adminSearchUsers, adminGetUserDetail, adminSuspendUser, adminUnsuspendUser,
   adminWarnUser, adminSoftDeleteUser, adminPermanentlyDeleteUser,
   adminListChats, adminGetOrCreateChat, adminGetChatRoom, adminSendChatMessage,
+  adminResetDatabases,
 } from './api';
 
 // ── Shared Styles ──
@@ -1161,6 +1162,10 @@ export default function App() {
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [showResetDb, setShowResetDb] = useState(false);
+  const [resettingDb, setResettingDb] = useState(false);
+  const [resetDbError, setResetDbError] = useState('');
+  const [resetDbSuccess, setResetDbSuccess] = useState('');
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -1188,6 +1193,24 @@ export default function App() {
     setSelectedDispute(null);
     setSelectedUser(null);
     setSelectedChat(null);
+  }
+
+  async function handleResetDatabases() {
+    setResettingDb(true);
+    setResetDbError('');
+    setResetDbSuccess('');
+    try {
+      const res = await adminResetDatabases();
+      setResetDbSuccess(res.data?.message || 'Databases reset successfully.');
+      setShowResetDb(false);
+      // Force logout since all users (including admin) are deleted
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
+    } catch (err) {
+      setResetDbError(err.message || 'Reset failed.');
+    }
+    setResettingDb(false);
   }
 
   if (!user) {
@@ -1232,11 +1255,48 @@ export default function App() {
                onClick={() => handleNav('users')}>👥 Users</div>
           <div style={{ ...S.navItem, ...(page === 'chats' && !selectedChat ? S.navItemActive : {}) }}
                onClick={() => handleNav('chats')}>💬 Admin Chats</div>
+          <div style={{ ...S.navItem, borderLeftColor: 'transparent', color: '#d64550' }}
+               onClick={() => setShowResetDb(true)}>💥 Reset Databases</div>
         </div>
         <div style={{ padding: '16px 20px', borderTop: '1px solid #2a2540' }}>
           <div style={{ fontSize: 12, color: '#705e8a', marginBottom: 8 }}>{user?.email || 'Admin'}</div>
           <button onClick={handleLogout} style={{ ...S.btn, ...S.btnSecondary, width: '100%', justifyContent: 'center' }}>Sign Out</button>
         </div>
+        {showResetDb && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+            <div style={{ ...S.card, width: '90%', maxWidth: 480, border: '2px solid #d64550' }}>
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                <div style={{ fontSize: 40, marginBottom: 8 }}>💥</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#d64550' }}>Reset All Databases?</div>
+              </div>
+              <p style={{ fontSize: 13, color: '#b09ac0', lineHeight: 1.6, marginBottom: 8 }}>
+                This will <strong style={{ color: '#d64550' }}>permanently delete ALL data</strong> including:
+              </p>
+              <ul style={{ fontSize: 13, color: '#b09ac0', lineHeight: 2, marginBottom: 12, paddingLeft: 20 }}>
+                <li>All users, commissions, disputes, messages</li>
+                <li>All chat rooms and admin chat history</li>
+                <li>All files in the Cloudflare R2 bucket</li>
+              </ul>
+              <p style={{ fontSize: 13, color: '#b09ac0', lineHeight: 1.6, marginBottom: 16 }}>
+                The database will be recreated with seed data (dusty, thomasw, admin test accounts).
+                <strong style={{ color: '#d64550' }}> This action cannot be undone.</strong>
+              </p>
+              {resetDbError && <div style={{ ...S.errorBox, marginBottom: 12 }}>{resetDbError}</div>}
+              {resetDbSuccess && <div style={{ ...S.successBox, marginBottom: 12 }}>{resetDbSuccess}</div>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={handleResetDatabases} disabled={resettingDb}
+                        style={{ ...S.btn, ...S.btnDanger, flex: 1, justifyContent: 'center' }}>
+                  {resettingDb ? 'Resetting…' : '💥 YES, RESET EVERYTHING'}
+                </button>
+                <button onClick={() => { setShowResetDb(false); setResetDbError(''); setResetDbSuccess(''); }}
+                        disabled={resettingDb}
+                        style={{ ...S.btn, ...S.btnSecondary, flex: 1, justifyContent: 'center' }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       <div style={S.main}>
