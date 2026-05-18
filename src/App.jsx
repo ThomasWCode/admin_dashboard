@@ -689,7 +689,7 @@ function AdminChatRoomPage({ roomId, onBack }) {
         const res = await adminGetChatRoom(roomId);
         setData(res.data);
       } catch (_) {}
-    }, 5000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [roomId]);
 
@@ -884,7 +884,7 @@ function DisputeDetailPage({ disputeId, onBack }) {
           const res = await getDispute(disputeId);
           setData(res.data);
         } catch (_) {}
-      }, 5000);
+      }, 15000);
       return () => clearInterval(interval);
     }
   }, [tab, disputeId]);
