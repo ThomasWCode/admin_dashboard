@@ -26,17 +26,6 @@ export function getApiUrl() {
   return API_URL;
 }
 
-// ── Request deduplication ─────────────────────────────────────────────────────
-// If the same request is already in-flight, reuse the promise instead of
-// firing a duplicate. Key = method + path + body.
-const _inFlight = new Promise();
-
-function _fingerprint(path, options) {
-  const method = options.method || 'GET';
-  const body = options.body || '';
-  return `${method}:${path}:${body}`;
-}
-
 async function request(path, options = {}) {
   const token = localStorage.getItem('ruffl_admin_token');
   const headers = {
