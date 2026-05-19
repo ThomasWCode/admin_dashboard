@@ -127,7 +127,7 @@ function LoginPage({ onLogin }) {
 // USERS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function UsersPage({ onViewUser }) {
+function UsersPage({ onViewUser, refreshKey }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -147,7 +147,7 @@ function UsersPage({ onViewUser }) {
     setLoading(false);
   }, [search, filter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   function handleSearchChange(val) {
     setSearch(val);
@@ -226,7 +226,7 @@ function UsersPage({ onViewUser }) {
 }
 
 // ── User Detail Page ──
-function UserDetailPage({ userId, onBack, onMessageUser }) {
+function UserDetailPage({ userId, onBack, onMessageUser, refreshKey }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -262,7 +262,7 @@ function UserDetailPage({ userId, onBack, onMessageUser }) {
     }).catch(err => { setError(err.message); });
   }
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   async function handleSuspend() {
     setActionLoading(true);
@@ -594,7 +594,7 @@ function UserDetailPage({ userId, onBack, onMessageUser }) {
 // ADMIN CHATS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function AdminChatsPage({ onViewChat }) {
+function AdminChatsPage({ onViewChat, refreshKey }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -611,7 +611,7 @@ function AdminChatsPage({ onViewChat }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   return (
     <div style={S.content}>
@@ -662,7 +662,7 @@ function AdminChatsPage({ onViewChat }) {
 }
 
 // ── Admin Chat Room Page ──
-function AdminChatRoomPage({ roomId, onBack }) {
+function AdminChatRoomPage({ roomId, onBack, refreshKey }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -681,40 +681,28 @@ function AdminChatRoomPage({ roomId, onBack }) {
     setLoading(false);
   }, [roomId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
-  // Visibility-aware polling: pauses when tab is hidden, 8s interval
-  const chatPollStopRef = useRef(null);
+  // Visibility-aware polling
+  const pollStopRef = useRef(null);
   useEffect(() => {
-    chatPollStopRef.current = startVisibilityPoll(async () => {
+    pollStopRef.current = startVisibilityPoll(async () => {
       try {
         const res = await adminGetChatRoom(roomId);
         setData(res.data);
       } catch (_) {}
     }, 8000);
-    return () => { if (chatPollStopRef.current) chatPollStopRef.current(); };
+    return () => { if (pollStopRef.current) pollStopRef.current(); };
   }, [roomId]);
 
   async function handleSend() {
     if (!msgText.trim()) return;
-    const content = msgText.trim();
     setSending(true);
-    const adminUserId = localStorage.getItem('ruffl_admin_user_id');
-    setData(prev => prev ? {
-      ...prev,
-      messages: [...(prev.messages || []), {
-        id: 'temp-' + Date.now(),
-        content,
-        sender_id: adminUserId,
-        username: 'You',
-        role: 'admin',
-        sent_at: new Date().toISOString(),
-      }]
-    } : prev);
-    setMsgText('');
     try {
-      await adminSendChatMessage(roomId, content);
-    } catch (err) { setError(err.message); await load(); }
+      await adminSendChatMessage(roomId, msgText.trim());
+      setMsgText('');
+      await load();
+    } catch (err) { setError(err.message); }
     setSending(false);
   }
 
@@ -767,10 +755,10 @@ function AdminChatRoomPage({ roomId, onBack }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// DISPUTES TAB (unchanged from original)
+// DISPUTES TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function DisputeListPage({ onViewDispute }) {
+function DisputeListPage({ onViewDispute, refreshKey }) {
   const [disputes, setDisputes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -788,7 +776,7 @@ function DisputeListPage({ onViewDispute }) {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
   const filtered = filter === 'all' ? disputes : disputes.filter(d => d.status === filter);
 
@@ -865,7 +853,7 @@ function DisputeListPage({ onViewDispute }) {
   );
 }
 
-function DisputeDetailPage({ disputeId, onBack }) {
+function DisputeDetailPage({ disputeId, onBack, refreshKey }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -889,9 +877,9 @@ function DisputeDetailPage({ disputeId, onBack }) {
     setLoading(false);
   }, [disputeId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [load, refreshKey]);
 
-  // Visibility-aware polling: pauses when tab is hidden, 8s interval
+  // Visibility-aware polling
   const pollStopRef = useRef(null);
   useEffect(() => {
     if (pollStopRef.current) { pollStopRef.current(); pollStopRef.current = null; }
@@ -1192,6 +1180,8 @@ export default function App() {
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn()) {
@@ -1221,6 +1211,12 @@ export default function App() {
     setSelectedChat(null);
   }
 
+  function handleRefresh() {
+    setRefreshing(true);
+    setRefreshKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 500);
+  }
+
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -1230,22 +1226,22 @@ export default function App() {
   let topBarTitle;
 
   if (selectedChat) {
-    content = <AdminChatRoomPage roomId={selectedChat} onBack={() => setSelectedChat(null)} />;
+    content = <AdminChatRoomPage roomId={selectedChat} onBack={() => setSelectedChat(null)} refreshKey={refreshKey} />;
     topBarTitle = 'Admin Chat';
   } else if (selectedUser) {
-    content = <UserDetailPage userId={selectedUser} onBack={() => setSelectedUser(null)} onMessageUser={(chatId) => { setSelectedUser(null); setSelectedChat(chatId); }} />;
+    content = <UserDetailPage userId={selectedUser} onBack={() => setSelectedUser(null)} onMessageUser={(chatId) => { setSelectedUser(null); setSelectedChat(chatId); }} refreshKey={refreshKey} />;
     topBarTitle = 'User Detail';
   } else if (selectedDispute) {
-    content = <DisputeDetailPage disputeId={selectedDispute} onBack={() => setSelectedDispute(null)} />;
+    content = <DisputeDetailPage disputeId={selectedDispute} onBack={() => setSelectedDispute(null)} refreshKey={refreshKey} />;
     topBarTitle = 'Dispute Detail';
   } else if (page === 'users') {
-    content = <UsersPage onViewUser={setSelectedUser} />;
+    content = <UsersPage onViewUser={setSelectedUser} refreshKey={refreshKey} />;
     topBarTitle = 'User Management';
   } else if (page === 'chats') {
-    content = <AdminChatsPage onViewChat={setSelectedChat} />;
+    content = <AdminChatsPage onViewChat={setSelectedChat} refreshKey={refreshKey} />;
     topBarTitle = 'Admin Chats';
   } else {
-    content = <DisputeListPage onViewDispute={setSelectedDispute} />;
+    content = <DisputeListPage onViewDispute={setSelectedDispute} refreshKey={refreshKey} />;
     topBarTitle = 'Dispute Resolution';
   }
 
@@ -1273,7 +1269,12 @@ export default function App() {
       <div style={S.main}>
         <div style={S.topBar}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#e8e3f0' }}>{topBarTitle}</div>
-          <div style={{ fontSize: 12, color: '#705e8a' }}>Ruffl Administration</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={handleRefresh} disabled={refreshing} style={{ ...S.btn, ...S.btnSecondary, ...S.btnSm, opacity: refreshing ? 0.6 : 1, cursor: refreshing ? 'default' : 'pointer' }}>
+              {refreshing ? '⟳ Refreshing…' : '⟳ Refresh'}
+            </button>
+            <div style={{ fontSize: 12, color: '#705e8a' }}>Ruffl Administration</div>
+          </div>
         </div>
         {content}
       </div>
