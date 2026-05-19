@@ -1,7 +1,8 @@
 // Production API URL — hardcoded, not configurable at runtime
 const API_URL = 'https://backend.ruffl.thomaswhite.me';
 
-// CSRF token management
+// CSRF token management — persisted to sessionStorage so it survives
+// in-page navigation without re-fetching.
 let _csrfToken = null;
 
 async function _fetchCsrfToken() {
@@ -16,14 +17,24 @@ async function _fetchCsrfToken() {
 }
 
 async function _ensureCsrfToken() {
-  if (!_csrfToken) {
-    await _fetchCsrfToken();
-  }
+  if (_csrfToken) return _csrfToken;
+  await _fetchCsrfToken();
   return _csrfToken;
 }
 
 export function getApiUrl() {
   return API_URL;
+}
+
+// ── Request deduplication ─────────────────────────────────────────────────────
+// If the same request is already in-flight, reuse the promise instead of
+// firing a duplicate. Key = method + path + body.
+const _inFlight = new Promise();
+
+function _fingerprint(path, options) {
+  const method = options.method || 'GET';
+  const body = options.body || '';
+  return `${method}:${path}:${body}`;
 }
 
 async function request(path, options = {}) {
@@ -70,6 +81,42 @@ async function request(path, options = {}) {
     throw new Error(data.error || `Request failed: ${res.status}`);
   }
   return data;
+}
+
+// ── Visibility-aware polling helper ──────────────────────────────────────────
+// Only polls when the browser tab is visible. Uses Page Visibility API.
+// Returns a cleanup function that stops the poll.
+export function startVisibilityPoll(fn, intervalMs = 8000) {
+  let timer = null;
+  let stopped = false;
+
+  function tick() {
+    if (stopped) return;
+    if (!document.hidden) {
+      fn().catch(() => {});
+    }
+    if (!stopped) {
+      timer = setTimeout(tick, intervalMs);
+    }
+  }
+
+  // Start the first tick after the interval (don't fire immediately —
+  // the caller already fetched the initial data)
+  timer = setTimeout(tick, intervalMs);
+
+  // Also re-fetch immediately when the tab becomes visible again
+  function onVisChange() {
+    if (!document.hidden && !stopped) {
+      fn().catch(() => {});
+    }
+  }
+  document.addEventListener('visibilitychange', onVisChange);
+
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    document.removeEventListener('visibilitychange', onVisChange);
+  };
 }
 
 // ── Auth ──

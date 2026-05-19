@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   listDisputes, getDispute, assignDispute, adjudicateDispute, closeDispute,
   sendDisputeMessage, listCommissions, getCommission,
@@ -6,6 +6,7 @@ import {
   adminSearchUsers, adminGetUserDetail, adminSuspendUser, adminUnsuspendUser,
   adminWarnUser, adminSoftDeleteUser, adminPermanentlyDeleteUser,
   adminListChats, adminGetOrCreateChat, adminGetChatRoom, adminSendChatMessage,
+  startVisibilityPoll,
 } from './api';
 
 // ── Shared Styles ──
@@ -682,25 +683,38 @@ function AdminChatRoomPage({ roomId, onBack }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Poll for live updates
+  // Visibility-aware polling: pauses when tab is hidden, 8s interval
+  const chatPollStopRef = useRef(null);
   useEffect(() => {
-    const interval = setInterval(async () => {
+    chatPollStopRef.current = startVisibilityPoll(async () => {
       try {
         const res = await adminGetChatRoom(roomId);
         setData(res.data);
       } catch (_) {}
-    }, 5000);
-    return () => clearInterval(interval);
+    }, 8000);
+    return () => { if (chatPollStopRef.current) chatPollStopRef.current(); };
   }, [roomId]);
 
   async function handleSend() {
     if (!msgText.trim()) return;
+    const content = msgText.trim();
     setSending(true);
+    const adminUserId = localStorage.getItem('ruffl_admin_user_id');
+    setData(prev => prev ? {
+      ...prev,
+      messages: [...(prev.messages || []), {
+        id: 'temp-' + Date.now(),
+        content,
+        sender_id: adminUserId,
+        username: 'You',
+        role: 'admin',
+        sent_at: new Date().toISOString(),
+      }]
+    } : prev);
+    setMsgText('');
     try {
-      await adminSendChatMessage(roomId, msgText.trim());
-      setMsgText('');
-      await load();
-    } catch (err) { setError(err.message); }
+      await adminSendChatMessage(roomId, content);
+    } catch (err) { setError(err.message); await load(); }
     setSending(false);
   }
 
@@ -877,48 +891,65 @@ function DisputeDetailPage({ disputeId, onBack }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Visibility-aware polling: pauses when tab is hidden, 8s interval
+  const pollStopRef = useRef(null);
   useEffect(() => {
+    if (pollStopRef.current) { pollStopRef.current(); pollStopRef.current = null; }
     if (tab === 'evidence' || tab === 'messages') {
-      const interval = setInterval(async () => {
+      pollStopRef.current = startVisibilityPoll(async () => {
         try {
           const res = await getDispute(disputeId);
           setData(res.data);
         } catch (_) {}
-      }, 5000);
-      return () => clearInterval(interval);
+      }, 8000);
     }
+    return () => { if (pollStopRef.current) { pollStopRef.current(); pollStopRef.current = null; } };
   }, [tab, disputeId]);
 
   async function handleAssign() {
-    try { await assignDispute(disputeId); await load(); } catch (err) { setError(err.message); }
+    setData(prev => prev ? { ...prev, status: 'under_review' } : prev);
+    try { await assignDispute(disputeId); } catch (err) { setError(err.message); await load(); }
   }
 
   async function handleAdjudicate() {
     if (!resolution || !resolutionMsg.trim()) { setError('Resolution type and message are required.'); return; }
     setAdjudicating(true);
     setError('');
+    setData(prev => prev ? { ...prev, status: 'resolved', resolution, resolution_message: resolutionMsg } : prev);
     try {
       await adjudicateDispute(disputeId, resolution, resolutionMsg);
       setShowAdjudicate(false);
       setResolution('');
       setResolutionMsg('');
-      await load();
-    } catch (err) { setError(err.message); }
+    } catch (err) { setError(err.message); await load(); }
     setAdjudicating(false);
   }
 
   async function handleClose() {
-    try { await closeDispute(disputeId); await load(); } catch (err) { setError(err.message); }
+    setData(prev => prev ? { ...prev, status: 'closed' } : prev);
+    try { await closeDispute(disputeId); } catch (err) { setError(err.message); await load(); }
   }
 
   async function handleSendMsg() {
     if (!msgText.trim()) return;
+    const content = msgText.trim();
     setSendingMsg(true);
+    const adminUserId = localStorage.getItem('ruffl_admin_user_id');
+    setData(prev => prev ? {
+      ...prev,
+      messages: [...(prev.messages || []), {
+        id: 'temp-' + Date.now(),
+        content,
+        sender_id: adminUserId,
+        username: 'You',
+        role: 'admin',
+        sent_at: new Date().toISOString(),
+      }]
+    } : prev);
+    setMsgText('');
     try {
-      await sendDisputeMessage(disputeId, msgText.trim());
-      setMsgText('');
-      await load();
-    } catch (err) { setError(err.message); }
+      await sendDisputeMessage(disputeId, content);
+    } catch (err) { setError(err.message); await load(); }
     setSendingMsg(false);
   }
 
